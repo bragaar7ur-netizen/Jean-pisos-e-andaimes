@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engenharia Pro - Controle de Nuvem</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .card { @apply bg-white p-6 rounded-xl shadow-sm border border-gray-100; }
+        .btn-primary { @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-all disabled:opacity-50; }
+        .btn-secondary { @apply bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-all; }
+        .input-field { @apply w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500; }
+        .badge-ativa { @apply bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase; }
+        .badge-finalizada { @apply bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen pb-12">
+
+    <nav class="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Engenharia <span class="text-blue-600">Pro</span></h1>
+            <div id="statusConexao" class="flex items-center text-xs font-medium text-orange-500">
+                <span class="w-2 h-2 bg-orange-500 rounded-full mr-2 animate-pulse"></span>
+                Conectando à Nuvem...
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-6">
+        
+        <!-- Dashboard -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="card">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Disponível Andaimes</p>
+                <h3 class="text-2xl font-bold text-green-600" id="dispA">--</h3>
+            </div>
+            <div class="card">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Disponível Pisos</p>
+                <h3 class="text-2xl font-bold text-green-600" id="dispP">--</h3>
+            </div>
+            <div class="card">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Em Obra (A)</p>
+                <h3 class="text-2xl font-bold text-orange-600" id="obraA">--</h3>
+            </div>
+            <div class="card">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Em Obra (P)</p>
+                <h3 class="text-2xl font-bold text-orange-600" id="obraP">--</h3>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Formulário -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="card">
+                    <h2 class="text-lg font-bold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                        Novo Lançamento / Transferência
+                    </h2>
+                    <form id="movForm" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Origem</label>
+                                <select id="origem" class="input-field">
+                                    <option value="ESTOQUE">Estoque Central</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Destino (Obra)</label>
+                                <input type="text" id="obraDestino" required placeholder="Nome da Obra" class="input-field">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Qtd Andaimes</label>
+                                <input type="number" id="qtdA" value="0" min="0" required class="input-field">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Qtd Pisos</label>
+                                <input type="number" id="qtdP" value="0" min="0" required class="input-field">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Data da Movimentação</label>
+                            <input type="date" id="dataEntrada" required class="input-field">
+                        </div>
+
+                        <button type="submit" id="btnSalvar" class="btn-primary w-full py-3">Registrar na Nuvem</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tabela de Obras -->
+            <div class="lg:col-span-2">
+                <div class="card overflow-hidden p-0">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                        <h2 class="text-lg font-bold">Histórico e Controle de Obras</h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-100/50 text-gray-500 text-[10px] uppercase font-bold">
+                                <tr>
+                                    <th class="px-6 py-3">Obra / Origem</th>
+                                    <th class="px-6 py-3">Equipamento</th>
+                                    <th class="px-6 py-3">Período</th>
+                                    <th class="px-6 py-3 text-right">Valor Lançado</th>
+                                    <th class="px-6 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaObras" class="divide-y divide-gray-100">
+                                <!-- Preenchido pelo Firebase -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Retirada -->
+    <div id="modalRetirada" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <h2 class="text-2xl font-bold mb-2">Finalizar Alocação</h2>
+            <p class="text-gray-500 mb-6 text-sm">Confirme a data de retirada para o fechamento financeiro.</p>
+            
+            <label class="block text-sm font-medium text-gray-700 mb-1">Data de Retirada</label>
+            <input type="date" id="dataRetirada" class="input-field mb-6 py-3 text-lg">
+            
+            <div class="flex flex-col space-y-3">
+                <button onclick="confirmarRetirada()" id="btnConfirmarRetirada" class="btn-primary py-3">Confirmar e Devolver ao Estoque</button>
+                <button onclick="fecharModal()" class="btn-secondary py-3">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Initialization
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'engenharia-andaimes-v1';
+
+        // Constantes do Negócio
+        const TOTAL = { andaimes: 104, pisos: 28 };
+        const PRECOS = { andaime: 12.00, piso: 15.00 };
+        
+        let user = null;
+        let movimentacoes = [];
+        let itemParaFechar = null;
+
+        // Rule: Always authenticate BEFORE database operations
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Erro Auth:", err);
+                mostrarAviso("Erro ao conectar na nuvem. Verifique sua conexão.");
+            }
+        };
+
+        // Initialize authentication
+        initAuth();
+
+        // Database listener only starts after auth is confirmed
+        onAuthStateChanged(auth, (u) => {
+            user = u;
+            if (user) {
+                document.getElementById('statusConexao').innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span> Sincronizado na Nuvem';
+                document.getElementById('statusConexao').classList.remove('text-orange-500');
+                document.getElementById('statusConexao').classList.add('text-green-600');
+                ouvirDados();
+            }
+        });
+
+        function ouvirDados() {
+            if (!user) return;
+            // Rule: Use the strict collection path pattern
+            const colPath = collection(db, 'artifacts', appId, 'public', 'data', 'movimentacoes');
+            
+            // Added error callback to onSnapshot to catch permission issues early
+            onSnapshot(colPath, (snapshot) => {
+                movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderizar();
+                atualizarDropdownOrigem();
+            }, (error) => {
+                console.error("Erro Firestore Snapshot:", error);
+                if (error.code === 'permission-denied') {
+                    mostrarAviso("Erro de permissão. Tentando reconectar...");
+                }
+            });
+        }
+
+        // Lógica de Negócio
+        function calcularValor(m) {
+            const entrada = new Date(m.dataEntrada);
+            const saida = m.dataRetirada ? new Date(m.dataRetirada) : new Date();
+            const diffDays = Math.ceil(Math.abs(saida - entrada) / (1000 * 60 * 60 * 24)) || 1;
+            return ((m.qtdA * PRECOS.andaime / 30) + (m.qtdP * PRECOS.piso / 30)) * diffDays;
+        }
+
+        document.getElementById('movForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!user) {
+                mostrarAviso("Aguarde a conexão com a nuvem.");
+                return;
+            }
+
+            const btn = document.getElementById('btnSalvar');
+            btn.disabled = true;
+            btn.innerText = "Salvando...";
+
+            const novaMov = {
+                origem: document.getElementById('origem').value,
+                destino: document.getElementById('obraDestino').value.toUpperCase(),
+                qtdA: parseInt(document.getElementById('qtdA').value),
+                qtdP: parseInt(document.getElementById('qtdP').value),
+                dataEntrada: document.getElementById('dataEntrada').value,
+                dataRetirada: null,
+                status: 'ativa',
+                criadoEm: serverTimestamp()
+            };
+
+            const estoque = calcularUsoEfetivo();
+            if (novaMov.origem === 'ESTOQUE') {
+                if (estoque.andaimes + novaMov.qtdA > TOTAL.andaimes || estoque.pisos + novaMov.qtdP > TOTAL.pisos) {
+                    mostrarAviso("Estoque insuficiente!");
+                    btn.disabled = false;
+                    btn.innerText = "Registrar na Nuvem";
+                    return;
+                }
+            }
+
+            try {
+                const colPath = collection(db, 'artifacts', appId, 'public', 'data', 'movimentacoes');
+                await addDoc(colPath, novaMov);
+                document.getElementById('movForm').reset();
+                document.getElementById('dataEntrada').valueAsDate = new Date();
+                mostrarAviso("Registrado com sucesso!", "success");
+            } catch (err) {
+                console.error("Erro ao salvar:", err);
+                mostrarAviso("Erro ao salvar dados.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Registrar na Nuvem";
+            }
+        });
+
+        window.abrirModal = (id) => {
+            itemParaFechar = id;
+            document.getElementById('modalRetirada').classList.remove('hidden');
+        };
+
+        window.fecharModal = () => {
+            document.getElementById('modalRetirada').classList.add('hidden');
+        };
+
+        window.confirmarRetirada = async () => {
+            const dataR = document.getElementById('dataRetirada').value;
+            if (!dataR || !user) return;
+
+            const m = movimentacoes.find(x => x.id === itemParaFechar);
+            const btn = document.getElementById('btnConfirmarRetirada');
+            btn.disabled = true;
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'movimentacoes', itemParaFechar);
+                await updateDoc(docRef, {
+                    dataRetirada: dataR,
+                    status: 'finalizada',
+                    valorFechado: calcularValor({ ...m, dataRetirada: dataR })
+                });
+                fecharModal();
+            } catch (err) {
+                console.error("Erro ao atualizar:", err);
+                mostrarAviso("Erro ao atualizar dados.");
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        window.excluirMov = async (id) => {
+            if (!user) return;
+            if (confirm("Excluir este registro permanentemente da nuvem?")) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'movimentacoes', id);
+                    await deleteDoc(docRef);
+                } catch (err) { console.error(err); }
+            }
+        };
+
+        function calcularUsoEfetivo() {
+            return movimentacoes.reduce((acc, m) => {
+                if (m.status === 'ativa') {
+                    acc.andaimes += m.qtdA;
+                    acc.pisos += m.qtdP;
+                }
+                return acc;
+            }, { andaimes: 0, pisos: 0 });
+        }
+
+        function atualizarDropdownOrigem() {
+            const select = document.getElementById('origem');
+            const obrasAtivas = [...new Set(movimentacoes.filter(m => m.status === 'ativa').map(m => m.destino))];
+            
+            let html = '<option value="ESTOQUE">Estoque Central</option>';
+            obrasAtivas.forEach(obra => {
+                html += `<option value="${obra}">Obra: ${obra}</option>`;
+            });
+            select.innerHTML = html;
+        }
+
+        function renderizar() {
+            const uso = calcularUsoEfetivo();
+            document.getElementById('dispA').innerText = TOTAL.andaimes - uso.andaimes;
+            document.getElementById('dispP').innerText = TOTAL.pisos - uso.pisos;
+            document.getElementById('obraA').innerText = uso.andaimes;
+            document.getElementById('obraP').innerText = uso.pisos;
+
+            const lista = document.getElementById('listaObras');
+            lista.innerHTML = '';
+
+            const ordenadas = [...movimentacoes].sort((a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada));
+
+            ordenadas.forEach(m => {
+                const valor = m.status === 'ativa' ? calcularValor(m) : (m.valorFechado || 0);
+                const tr = document.createElement('tr');
+                tr.className = `hover:bg-gray-50 transition-colors ${m.status === 'finalizada' ? 'opacity-60' : ''}`;
+                
+                tr.innerHTML = `
+                    <td class="px-6 py-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="${m.status === 'ativa' ? 'badge-ativa' : 'badge-finalizada'}">${m.status}</span>
+                        </div>
+                        <div class="font-bold text-gray-800 mt-1">${m.destino}</div>
+                        <div class="text-[10px] text-gray-400">Vem de: ${m.origem}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-semibold">${m.qtdA} Andaimes</div>
+                        <div class="text-xs text-gray-500">${m.qtdP} Pisos Metálicos</div>
+                    </td>
+                    <td class="px-6 py-4 text-xs text-gray-600">
+                        <div>In: ${m.dataEntrada.split('-').reverse().join('/')}</div>
+                        <div>Out: ${m.dataRetirada ? m.dataRetirada.split('-').reverse().join('/') : '--'}</div>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="font-bold text-blue-700">R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                        <div class="text-[10px] text-gray-400 font-medium">${m.status === 'ativa' ? 'Acumulado' : 'Total Fechado'}</div>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex justify-end space-x-2">
+                            ${m.status === 'ativa' ? 
+                                `<button onclick="abrirModal('${m.id}')" class="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-md hover:bg-blue-100 font-bold">Finalizar</button>` : 
+                                ``
+                            }
+                            <button onclick="excluirMov('${m.id}')" class="p-1 text-gray-300 hover:text-red-500">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                lista.appendChild(tr);
+            });
+        }
+
+        function mostrarAviso(msg, tipo = "error") {
+            const div = document.createElement('div');
+            div.className = `fixed bottom-5 right-5 ${tipo === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-3 rounded-lg shadow-2xl z-[100] animate-bounce`;
+            div.innerText = msg;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        document.getElementById('dataEntrada').valueAsDate = new Date();
+
+    </script>
+</body>
+</html>
